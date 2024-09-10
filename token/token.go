@@ -32,8 +32,10 @@ const (
 	LBRACE = "{"
 	RBRACE = "}"
 
-	EQ     = "=="
-	NOT_EQ = "!="
+	EQ      = "=="
+	NEQ     = "!="
+	STR_EQ  = "==="
+	STR_NEQ = "!=="
 
 	FUNCTION = "FUNCTION"
 	LET      = "LET"
