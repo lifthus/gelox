@@ -6,7 +6,7 @@ const (
 	ASCII_NUL = 0
 )
 
-// tokenizes the input string.
+// Lexer tokenizes the input string.
 //
 // If Unicode should be supported, the reading method should be changed and the field ch should be changed to rune.
 // Because multiple bytes can be assigned for a single character in Unicode.
@@ -17,22 +17,14 @@ type Lexer struct {
 	ch           byte
 }
 
+// New creates a new Gelox lexer with the given input string.
 func New(input string) *Lexer {
 	l := &Lexer{input: input}
 	l.readChar()
 	return l
 }
 
-func (l *Lexer) readChar() {
-	if len(l.input) <= l.readPosition {
-		l.ch = ASCII_NUL // Not read or EOF
-	} else {
-		l.ch = l.input[l.readPosition]
-	}
-	l.position = l.readPosition
-	l.readPosition += 1
-}
-
+// NextToken returns the next token from the input string advancing the position pointers.
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
@@ -120,10 +112,25 @@ func (l *Lexer) NextToken() token.Token {
 	return tok
 }
 
+// newToken creates a new token with the given type and character.
 func newToken(tokenType token.TokenType, ch byte) token.Token {
 	return token.Token{Type: tokenType, Literal: string(ch)}
 }
 
+// readChar reads the next character from the input string and advances the position pointers.
+//
+// It returns ASCII_NUL if there is no character to read.
+func (l *Lexer) readChar() {
+	if len(l.input) <= l.readPosition {
+		l.ch = ASCII_NUL // Not read or EOF
+	} else {
+		l.ch = l.input[l.readPosition]
+	}
+	l.position = l.readPosition
+	l.readPosition += 1
+}
+
+// readIdentifier reads the identifier from the input string advancing the position pointers.
 func (l *Lexer) readIdentifier() string {
 	position := l.position
 	for isLetter(l.ch) {
@@ -132,20 +139,24 @@ func (l *Lexer) readIdentifier() string {
 	return l.input[position:l.position]
 }
 
-func isLetter(ch byte) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
-}
-
+// skipWhitespace skips the whitespace characters.
 func (l *Lexer) skipWhitespace() {
 	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
 		l.readChar()
 	}
 }
 
+// isLetter checks if the given character can be recognized as a letter.
+func isLetter(ch byte) bool {
+	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
+}
+
+// isDigit checks if the given character can be recognized as a digit.
 func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
 }
 
+// readNumber reads the number from the input string advancing the position pointers.
 func (l *Lexer) readNumber() string {
 	position := l.position
 	for isDigit(l.ch) {
@@ -154,14 +165,17 @@ func (l *Lexer) readNumber() string {
 	return l.input[position:l.position]
 }
 
+// peekNextChar returns the readPosition th character without advancing the position pointers.
 func (l *Lexer) peekNextChar() byte {
 	return l.peekCharAt(0)
 }
 
+// peekNextNextChar returns readPositioin + 1 th character without advancing the position pointers.
 func (l *Lexer) peekNextNextChar() byte {
 	return l.peekCharAt(1)
 }
 
+// peekCharAt returns the readPosition + offset th character without advancing the position pointers.
 func (l *Lexer) peekCharAt(offset int) byte {
 	targetPosition := l.readPosition + offset
 	if len(l.input) <= targetPosition {
