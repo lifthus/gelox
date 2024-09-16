@@ -2,20 +2,24 @@ package ast
 
 import "github.com/lifthus/gelox/token"
 
+// Node is a component of the abstract syntax tree of Gelox.
 type Node interface {
 	TokenLiteral() string
 }
 
+// Statement is a node that doesn't generate any value.
 type Statement interface {
 	Node
 	statementNode()
 }
 
+// Expression is a node that generates a value.
 type Expression interface {
 	Node
 	expressionNode()
 }
 
+// Program is the root node of the abstract syntax tree in Gelox.
 type Program struct {
 	Statements []Statement
 }
@@ -28,6 +32,9 @@ func (p *Program) TokenLiteral() string {
 	}
 }
 
+// LetStatement does assign a expression to a identifier.
+//
+// every valid program in Gelox is composed of a series of statements.
 type LetStatement struct {
 	Token token.Token // token.LET
 	Name  *Identifier
