@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/lifthus/gelox/ast"
 	"github.com/lifthus/gelox/lexer"
@@ -30,12 +31,28 @@ func New(l *lexer.Lexer) *Parser {
 
 	p.prefixParseFns = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.DOUBLE, p.parseDoubleLiteral)
 
 	// set curToken and peekToken
 	p.nextToken()
 	p.nextToken()
 
 	return p
+}
+
+func (p *Parser) parseDoubleLiteral() ast.Expression {
+	lit := &ast.DoubleLiteral{Token: p.curToken}
+
+	value, err := strconv.ParseFloat(p.curToken.Literal, 64)
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as float64", p.curToken.Literal)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	lit.Value = value
+
+	return lit
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
