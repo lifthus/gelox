@@ -11,10 +11,14 @@ const (
 // If Unicode should be supported, the reading method should be changed and the field ch should be changed to rune.
 // Because multiple bytes can be assigned for a single character in Unicode.
 type Lexer struct {
-	input        string
-	position     int
+	// input is the primitive target string to be tokenized.
+	input string
+	// position is the cursor that points to the current byte.
+	position int
+	// ch is the current byte.
+	ch byte
+	// readposition is the cursor that points the byte to be read.
 	readPosition int
-	ch           byte
 }
 
 // New creates a new Gelox lexer with the given input string.
@@ -24,13 +28,13 @@ func New(input string) *Lexer {
 	return l
 }
 
-// NextToken returns the next token from the input string advancing the position pointers.
+// NextToken returns the next token and advances the cursors.
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
 	l.skipWhitespace()
 
-	switch l.ch {
+	switch   l.ch {
 	case '=':
 		if l.peekNextChar() == '=' {
 			if l.peekNextNextChar() == '=' {
