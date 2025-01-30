@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/lifthus/gelox/ast"
@@ -161,5 +162,176 @@ func TestDoubleLiteralExpression(t *testing.T) {
 	}
 	if literal.TokenLiteral() != "5" {
 		t.Errorf("literal.TokenLiteral is not %s. got=%s", "5", literal.TokenLiteral())
+	}
+}
+
+func TestParsingPrefixExpressions(t *testing.T) {
+	prefixTests := []struct {
+		input       string
+		operator    string
+		doubleValue float64
+	}{
+		{"!5;", "!", 5},
+		{"-15;", "-", 15},
+	}
+
+	for _, tt := range prefixTests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain %d statements. got=%d\n", 1, len(program.Statements))
+		}
+
+		stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Fatalf("program.Statements[0] is not ast.ExpressionStatement. got=%T", program.Statements[0])
+		}
+
+		exp, ok := stmt.Expression.(*ast.PrefixExpression)
+		if !ok {
+			t.Fatalf("stmt is not ast.PrefixExpression. got=%T", stmt.Expression)
+		}
+		if exp.Operator != tt.operator {
+			t.Fatalf("exp.Operator is not '%s', got=%s", tt.operator, exp.Operator)
+		}
+		if !testDoubleLiteral(t, exp.Right, tt.doubleValue) {
+			return
+		}
+	}
+}
+
+func testDoubleLiteral(t *testing.T, dl ast.Expression, value float64) bool {
+	dbl, ok := dl.(*ast.DoubleLiteral)
+	if !ok {
+		t.Errorf("dl not *ast.DoubleLiteral. got=%T", dl)
+		return false
+	}
+
+	if dbl.Value != value {
+		t.Errorf("dbl.Value not %f. got=%f", value, dbl.Value)
+		return false
+	}
+
+	if pv, _ := strconv.ParseFloat(dbl.TokenLiteral(), 64); pv != value {
+		t.Errorf("dbl.TokenLiteral not %f. got=%s", value, dbl.TokenLiteral())
+		return false
+	}
+
+	return true
+}
+
+func TestParsingInfixExpressions(t *testing.T) {
+	infixTests := []struct {
+		input      string
+		leftValue  float64
+		operator   string
+		rightValue float64
+	}{
+		{"5 + 5;", 5, "+", 5},
+		{"5 - 5;", 5, "-", 5},
+		{"5 * 5;", 5, "*", 5},
+		{"5 / 5;", 5, "/", 5},
+		{"5 > 5;", 5, ">", 5},
+		{"5 < 5;", 5, "<", 5},
+		{"5 == 5;", 5, "==", 5},
+		{"5 != 5;", 5, "!=", 5},
+	}
+
+	for _, tt := range infixTests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain %d statements. got=%d\n", 1, len(program.Statements))
+		}
+
+		stmt, ok := program.Statements[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Fatalf("program.Statement[0] is not ast.ExpressionStatement. got=%T", program.Statements[0])
+		}
+
+		exp, ok := stmt.Expression.(*ast.InfixExpression)
+		if !ok {
+			t.Fatalf("exp is not ast.InfixExpression. got=%T", stmt.Expression)
+		}
+
+		if !testDoubleLiteral(t, exp.Left, tt.leftValue) {
+			return
+		}
+
+		if exp.Operator != tt.operator {
+			t.Fatalf("exp.Operator is not '%s'. got=%s", tt.operator, exp.Operator)
+		}
+
+		if !testDoubleLiteral(t, exp.Right, tt.rightValue) {
+			return
+		}
+	}
+}
+
+func TestOperatorPrecedenceParsing(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{
+			"-a * b",
+			"((-a) * b)",
+		},
+		{
+			"!-a",
+			"(!(-a))",
+		},
+		{
+			"a + b + c",
+			"((a + b) + c)",
+		},
+		{
+			"a + b - c",
+			"((a + b) - c)",
+		},
+		{
+			"a * b * c",
+			"((a * b) * c)",
+		},
+		{
+			"a * b / c",
+			"((a * b) / c)",
+		}, {
+			"a + b / c",
+			"(a + (b / c))",
+		}, {
+			"a + b * c + d / e - f",
+			"(((a + (b * c)) + (d / e)) - f)",
+		}, {
+			"3 + 4; -5 * 5",
+			"(3 + 4)((-5) * 5)",
+		}, {
+			"5 > 4 == 3 < 4",
+			"((5 > 4) == (3 < 4))",
+		}, {
+			"5 < 4 != 3 > 4",
+			"((5 < 4) != (3 > 4))",
+		}, {
+			"3 + 4 * 5 == 3 * 1 + 4 * 5",
+			"((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+		},
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		actual := program.String()
+		if actual != tt.expected {
+			t.Errorf("expected=%q, got=%q", tt.expected, actual)
+		}
 	}
 }
